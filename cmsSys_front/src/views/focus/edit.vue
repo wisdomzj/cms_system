@@ -34,7 +34,7 @@
               size="small"
               icon="el-icon-search"
               @click.stop="dialogshowVisible = true"
-            >查看原头像</el-button>
+            >查看原轮播图</el-button>
           </el-upload>
         </el-form-item>
         <el-form-item label="审核状态">

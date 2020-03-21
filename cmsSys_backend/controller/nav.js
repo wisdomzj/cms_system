@@ -46,9 +46,8 @@ class Nav{
 
     async edit(ctx,next){ 
         const { _id, review, navurl, ...data } = ctx.request.body
-        const url = navurl.indexOf('http://')>-1 ? navurl  : `http://${navurl}`
         const status = review === '审核' ? 1 : 0
-        const result = await navModel.updateOne({ _id }, { ...data, url, status })
+        const result = await navModel.updateOne({ _id }, { ...data, url:navurl, status })
         
         ctx.body = {
             result,
@@ -68,9 +67,8 @@ class Nav{
 
     async add(ctx,next){
         const { review, navurl, ...data } = ctx.request.body
-        const url = navurl.indexOf('http://')>-1 ? navurl  : `http://${navurl}`
         const status = review === '审核' ? 1 : 0  
-        const navEntity = new navModel({...data, url, status})
+        const navEntity = new navModel({...data, url:navurl, status})
         const result = await navEntity.save()
         
         ctx.body = {

@@ -53,7 +53,20 @@
           </el-form-item>
         </el-tab-pane>
         <el-tab-pane label="内容设置">
-          <Simditor v-model="form.content" :options="options" />
+          <el-upload
+            class="avatar-uploader"
+            action="upload"
+            multiple
+            :before-upload="beforeCoverImgUpload"
+            :http-request="uploadEditorImg"
+            :show-file-list="false"
+            accept=".jpg,.jpeg,.png"
+          />
+          <quill-editor
+            ref="myQuillEditor"
+            v-model="form.content"
+            :options="editorOption"
+          />
         </el-tab-pane>
         <el-tab-pane label="SEO设置">
           <el-form-item label="关键字">
@@ -80,12 +93,8 @@
 </template>
 
 <script>
-import Simditor from '../../components/Simditor'
 import { MessageBox } from 'element-ui'
 export default {
-  components: {
-    Simditor
-  },
   data() {
     return {
       form: {
@@ -100,31 +109,39 @@ export default {
         imgUrl: '',
         coverPicture: ''
       },
-      options: {
-        placeHolder: '请输入内容...',
-        toolbarFloat: true,
-        toolbar: [
-          'title',
-          'bold',
-          'italic',
-          'underline',
-          'strikethrough',
-          'fontScale',
-          'color',
-          '|',
-          'ol',
-          'ul',
-          'blockquote',
-          'code',
-          'table',
-          '|',
-          'link',
-          'hr',
-          '|',
-          'indent',
-          'outdent',
-          'alignment'
-        ]
+      editorOption: {
+        theme: 'snow',
+        placeholder: '请输入',
+        modules: {
+          toolbar: {
+            container: [
+              ['bold', 'italic', 'underline', 'strike'], // 加粗 斜体 下划线 删除线
+              ['blockquote', 'code-block'], // 引用  代码块
+              [{ 'size': ['small', false, 'large', 'huge'] }], // 文字大小
+              [{ list: 'ordered' }, { list: 'bullet' }], // 有序、无序列表
+              [{ script: 'sub' }, { script: 'super' }], // 上标/下标
+              [{ indent: '-1' }, { indent: '+1' }], // 缩进
+              [{ 'direction': 'rtl' }], // 文本方向
+              [{ header: [1, 2, 3, 4, 5, 6, false] }], // 标题
+              [{ color: [] }, { background: [] }], // 字体颜色、字体背景颜色
+              [{ font: [] }], // 字体种类
+              [{ align: [] }], // 对齐方式
+              ['clean'], // 清除文本格式
+              ['image'] // 图片
+            ],
+            // container: "#toolbar",
+            handlers: {
+              image(value) {
+                if (value) {
+                  // 调用element图片上传
+                  document.querySelector('.avatar-uploader input').click()
+                } else {
+                  this.quill.format('image', false)
+                }
+              }
+            }
+          }
+        }
       },
       author: '',
       artId: '',
@@ -216,6 +233,35 @@ export default {
         }
       })
     },
+    uploadEditorImg(params) {
+      const that = this
+      that.$request
+        .uploadFile({ file: params.file }, true, {
+          headers: {
+            'Content-Type': 'multipart/form-data;charset=UTF-8'
+          }
+        })
+        .then(res => {
+          // 获取富文本组件实例
+          const quill = that.$refs.myQuillEditor.quill
+          if (res.msg === 'success') {
+            // 获取光标所在位置
+            const length = quill.getSelection().index
+            // 插入图片，res为服务器返回的图片链接地址
+            quill.insertEmbed(length, 'image', res.file.imgUrl)
+            that.$notify({
+              title: '成功',
+              message: '插入图片成功',
+              type: 'success'
+            })
+          } else {
+            that.$notify.error({
+              title: '错误',
+              message: '插入图片失败'
+            })
+          }
+        })
+    },
     onSubmit() {
       this.form.artimgUrl = this.coverPicture
       this.$request
@@ -258,5 +304,83 @@ export default {
 <style lang="scss">
 .app-container {
   background: #ffffff;
+}
+.quill-editor {
+line-height: normal !important;
+margin-bottom: 20px;
+}
+.quill-editor .ql-container {
+  height: 350px;
+}
+.ql-snow .ql-tooltip[data-mode=link]::before {
+  content: "请输入链接地址:";
+}
+.ql-snow .ql-tooltip.ql-editing a.ql-action::after {
+    border-right: 0px;
+    content: '保存';
+    padding-right: 0px;
+}
+
+.ql-snow .ql-tooltip[data-mode=video]::before {
+    content: "请输入视频地址:";
+}
+
+.ql-snow .ql-picker.ql-size .ql-picker-label::before,
+.ql-snow .ql-picker.ql-size .ql-picker-item::before {
+  content: '14px';
+}
+.ql-snow .ql-picker.ql-size .ql-picker-label[data-value=small]::before,
+.ql-snow .ql-picker.ql-size .ql-picker-item[data-value=small]::before {
+  content: '10px';
+}
+.ql-snow .ql-picker.ql-size .ql-picker-label[data-value=large]::before,
+.ql-snow .ql-picker.ql-size .ql-picker-item[data-value=large]::before {
+  content: '18px';
+}
+.ql-snow .ql-picker.ql-size .ql-picker-label[data-value=huge]::before,
+.ql-snow .ql-picker.ql-size .ql-picker-item[data-value=huge]::before {
+  content: '32px';
+}
+
+.ql-snow .ql-picker.ql-header .ql-picker-label::before,
+.ql-snow .ql-picker.ql-header .ql-picker-item::before {
+  content: '文本';
+}
+.ql-snow .ql-picker.ql-header .ql-picker-label[data-value="1"]::before,
+.ql-snow .ql-picker.ql-header .ql-picker-item[data-value="1"]::before {
+  content: '标题1';
+}
+.ql-snow .ql-picker.ql-header .ql-picker-label[data-value="2"]::before,
+.ql-snow .ql-picker.ql-header .ql-picker-item[data-value="2"]::before {
+  content: '标题2';
+}
+.ql-snow .ql-picker.ql-header .ql-picker-label[data-value="3"]::before,
+.ql-snow .ql-picker.ql-header .ql-picker-item[data-value="3"]::before {
+  content: '标题3';
+}
+.ql-snow .ql-picker.ql-header .ql-picker-label[data-value="4"]::before,
+.ql-snow .ql-picker.ql-header .ql-picker-item[data-value="4"]::before {
+  content: '标题4';
+}
+.ql-snow .ql-picker.ql-header .ql-picker-label[data-value="5"]::before,
+.ql-snow .ql-picker.ql-header .ql-picker-item[data-value="5"]::before {
+  content: '标题5';
+}
+.ql-snow .ql-picker.ql-header .ql-picker-label[data-value="6"]::before,
+.ql-snow .ql-picker.ql-header .ql-picker-item[data-value="6"]::before {
+  content: '标题6';
+}
+
+.ql-snow .ql-picker.ql-font .ql-picker-label::before,
+.ql-snow .ql-picker.ql-font .ql-picker-item::before {
+  content: '标准字体';
+}
+.ql-snow .ql-picker.ql-font .ql-picker-label[data-value=serif]::before,
+.ql-snow .ql-picker.ql-font .ql-picker-item[data-value=serif]::before {
+  content: '衬线字体';
+}
+.ql-snow .ql-picker.ql-font .ql-picker-label[data-value=monospace]::before,
+.ql-snow .ql-picker.ql-font .ql-picker-item[data-value=monospace]::before {
+  content: '等宽字体';
 }
 </style>
